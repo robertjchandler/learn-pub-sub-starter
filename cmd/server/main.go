@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -13,6 +15,9 @@ func main() {
 
 	connectionString := "amqp://guest:guest@localhost:5672/"
 	conn, _ := amqp.Dial(connectionString)
+
+	ch, _ := conn.Channel()
+	pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
 
 	defer conn.Close()
 
