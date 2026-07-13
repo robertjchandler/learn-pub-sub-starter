@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -43,10 +41,6 @@ outerLoop:
 		default:
 			fmt.Println("Command not understood.")
 		}
-		// wait for ctrl+c
-		signalChan := make(chan os.Signal, 1)
-		signal.Notify(signalChan, os.Interrupt)
-		<-signalChan
 	}
 
 	fmt.Println("Peril shutting down.")
