@@ -20,6 +20,8 @@ func main() {
 
 	fmt.Println("Connection to Peril server successful.")
 
+	pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.SimpleQueueType{Durable: true})
+
 	gamelogic.PrintServerHelp()
 
 outerLoop:
