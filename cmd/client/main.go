@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -22,11 +23,16 @@ func main() {
 
 	fmt.Println("Connection to Peril client successful.")
 
-	username, _ := gamelogic.ClientWelcome()
-
-	pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, routing.PauseKey+"."+username, routing.PauseKey, pubsub.SimpleQueueType{Durable: false})
+	username, err := gamelogic.ClientWelcome()
+	if err != nil {
+		log.Fatalf("could not get username: %v", err)
+	}
 
 	gamestate := gamelogic.NewGameState(username)
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilDirect, routing.PauseKey+"."+username, routing.PauseKey, pubsub.SimpleQueueType{Durable: false}, handlerPause(gamestate))
+	if err != nil {
+		log.Fatalf("could not subscribe to pause: %v", err)
+	}
 
 outerLoop:
 	for {
