@@ -34,12 +34,30 @@ func main() {
 	}
 
 	gs := gamelogic.NewGameState(username)
-	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilDirect, routing.PauseKey+"."+username, routing.PauseKey, pubsub.SimpleQueueType{Durable: false}, handlerPause(gs))
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.ArmyMovesPrefix+"."+gs.GetUsername(),
+		routing.ArmyMovesPrefix+".*",
+		pubsub.SimpleQueueTransient,
+		handlerMove(gs),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to army moves: %v", err)
+	}
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilDirect,
+		routing.PauseKey+"."+gs.GetUsername(),
+		routing.PauseKey,
+		pubsub.SimpleQueueTransient,
+		handlerPause(gs),
+	)
 	if err != nil {
 		log.Fatalf("could not subscribe to pause: %v", err)
 	}
 
-	pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+gs.GetUsername(), routing.ArmyMovesPrefix+".*", pubsub.SimpleQueueType{Durable: false}, handlerMove(gs))
+	pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+gs.GetUsername(), routing.ArmyMovesPrefix+".*", pubsub.SimpleQueueTransient, handlerMove(gs))
 	if err != nil {
 		log.Fatalf("could not subscribe to army moves: %v", err)
 	}
@@ -52,16 +70,23 @@ outerLoop:
 		}
 		switch userinput[0] {
 		case "spawn":
-			gs.CommandSpawn(userinput)
+			err = gs.CommandSpawn(userinput)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
 		case "move":
-			mv, _ := gs.CommandMove(userinput)
+			mv, err := gs.CommandMove(userinput)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
 
 			err = pubsub.PublishJSON(
-				publishCh, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+mv.Player.Username, mv,
+				publishCh,
+				routing.ExchangePerilTopic,
+				routing.ArmyMovesPrefix+"."+mv.Player.Username,
+				mv,
 			)
 			if err != nil {
 				fmt.Printf("error: %s\n", err)

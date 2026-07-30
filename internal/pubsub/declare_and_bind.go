@@ -1,13 +1,12 @@
 package pubsub
 
 import (
-	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
+	"fmt"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type SimpleQueueType struct {
-	Durable bool // "false" = transient
-}
+type SimpleQueueType int
 
 func DeclareAndBind(
 	conn *amqp.Connection,
@@ -16,18 +15,32 @@ func DeclareAndBind(
 	key string,
 	queueType SimpleQueueType,
 ) (*amqp.Channel, amqp.Queue, error) {
-	ch, _ := conn.Channel()
-	PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
-
-	var durable, autoDelete, exclusive = false, false, false
-
-	if queueType.Durable {
-		durable, autoDelete, exclusive = true, false, false
-	} else {
-		durable, autoDelete, exclusive = false, true, true
+	ch, err := conn.Channel()
+	if err != nil {
+		return nil, amqp.Queue{}, fmt.Errorf("could not create channel: %v", err)
 	}
-	queue, _ := ch.QueueDeclare(queueName, durable, autoDelete, exclusive, false, nil)
 
-	ch.QueueBind(queueName, key, exchange, false, nil)
+	queue, err := ch.QueueDeclare(
+		queueName,                       // name
+		queueType == SimpleQueueDurable, // durable
+		queueType != SimpleQueueDurable, // delete when unused
+		queueType != SimpleQueueDurable, // exclusive
+		false,                           // no-wait
+		nil,                             // args
+	)
+	if err != nil {
+		return nil, amqp.Queue{}, fmt.Errorf("could not declare queue: %v", err)
+	}
+
+	err = ch.QueueBind(
+		queue.Name, // queue name
+		key,        // routing key
+		exchange,   // exchange
+		false,      // no-wait
+		nil,        // args
+	)
+	if err != nil {
+		return nil, amqp.Queue{}, fmt.Errorf("could not bind queue: %v", err)
+	}
 	return ch, queue, nil
 }
