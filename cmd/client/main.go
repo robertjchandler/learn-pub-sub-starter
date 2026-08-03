@@ -57,7 +57,7 @@ func main() {
 		log.Fatalf("could not subscribe to pause: %v", err)
 	}
 
-	pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+gs.GetUsername(), routing.ArmyMovesPrefix+".*", pubsub.SimpleQueueTransient, handlerMove(gs))
+	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+gs.GetUsername(), routing.ArmyMovesPrefix+".*", pubsub.SimpleQueueTransient, handlerMove(gs))
 	if err != nil {
 		log.Fatalf("could not subscribe to army moves: %v", err)
 	}

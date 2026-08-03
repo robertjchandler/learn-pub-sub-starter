@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
@@ -20,11 +21,20 @@ func main() {
 
 	fmt.Println("Connection to Peril server successful.")
 
-	pubsub.DeclareAndBind(conn, routing.ExchangePerilDirect, routing.GameLogSlug, routing.GameLogSlug+".*", pubsub.SimpleQueueDurable)
+	_, queue, err := pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.GameLogSlug,
+		routing.GameLogSlug+".*",
+		pubsub.SimpleQueueDurable,
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to pause: %v", err)
+	}
+	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	gamelogic.PrintServerHelp()
 
-outerLoop:
 	for {
 		userinput := gamelogic.GetInput()
 		if len(userinput) == 0 {
@@ -32,19 +42,36 @@ outerLoop:
 		}
 		switch userinput[0] {
 		case "pause":
-			fmt.Println("Sending pause message.")
-			pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+			fmt.Println("Publishing paused game state")
+			err = pubsub.PublishJSON(
+				ch,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{
+					IsPaused: true,
+				},
+			)
+			if err != nil {
+				log.Printf("could not publish time: %v", err)
+			}
 		case "resume":
-			fmt.Println("Sending resume message.")
-			pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
+			fmt.Println("Publishing resumes game state")
+			err = pubsub.PublishJSON(
+				ch,
+				routing.ExchangePerilDirect,
+				routing.PauseKey,
+				routing.PlayingState{
+					IsPaused: false,
+				},
+			)
+			if err != nil {
+				log.Printf("could not publish time: %v", err)
+			}
 		case "quit":
 			fmt.Println("Exiting game.")
-			break outerLoop
+			return
 		default:
-			fmt.Println("Command not understood.")
+			fmt.Println("unknown command")
 		}
 	}
-
-	fmt.Println("Peril shutting down.")
-	conn.Close()
 }
