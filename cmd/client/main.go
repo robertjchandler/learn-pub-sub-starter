@@ -17,7 +17,14 @@ func main() {
 	conn, _ := amqp.Dial(connectionString)
 
 	ch, _ := conn.Channel()
-	pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})
+	pubsub.PublishJSON(
+		ch,
+		routing.ExchangePerilDirect,
+		routing.PauseKey,
+		routing.PlayingState{
+			IsPaused: true,
+		},
+	)
 
 	defer conn.Close()
 
@@ -57,12 +64,18 @@ func main() {
 		log.Fatalf("could not subscribe to pause: %v", err)
 	}
 
-	err = pubsub.SubscribeJSON(conn, routing.ExchangePerilTopic, routing.ArmyMovesPrefix+"."+gs.GetUsername(), routing.ArmyMovesPrefix+".*", pubsub.SimpleQueueTransient, handlerMove(gs))
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		routing.ArmyMovesPrefix+"."+gs.GetUsername(),
+		routing.ArmyMovesPrefix+".*",
+		pubsub.SimpleQueueTransient,
+		handlerMove(gs),
+	)
 	if err != nil {
 		log.Fatalf("could not subscribe to army moves: %v", err)
 	}
 
-outerLoop:
 	for {
 		userinput := gamelogic.GetInput()
 		if len(userinput) == 0 {
@@ -101,7 +114,7 @@ outerLoop:
 			fmt.Println("Spamming not allowed yet!")
 		case "quit":
 			gamelogic.PrintQuit()
-			break outerLoop
+			return
 		default:
 			fmt.Println("Invalid command.")
 		}
