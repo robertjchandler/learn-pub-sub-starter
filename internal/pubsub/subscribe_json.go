@@ -33,7 +33,15 @@ func SubscribeJSON[T any](
 		return fmt.Errorf("could not declare and bind queue: %v", err)
 	}
 
-	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	msgs, err := ch.Consume(
+		queue.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("could not consume messages: %v", err)
 	}
