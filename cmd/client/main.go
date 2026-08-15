@@ -7,6 +7,7 @@ import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -16,21 +17,11 @@ func main() {
 	connectionString := "amqp://guest:guest@localhost:5672/"
 	conn, _ := amqp.Dial(connectionString)
 
-	ch, _ := conn.Channel()
-	pubsub.PublishJSON(
-		ch,
-		routing.ExchangePerilDirect,
-		routing.PauseKey,
-		routing.PlayingState{
-			IsPaused: true,
-		},
-	)
-
 	defer conn.Close()
 
 	fmt.Println("Connection to Peril client successful.")
 
-	publishCh, err := conn.Channel()
+	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("could not create channel: %v", err)
 	}
@@ -58,7 +49,7 @@ func main() {
 		routing.WarRecognitionsPrefix,
 		routing.WarRecognitionsPrefix+".*",
 		pubsub.SimpleQueueDurable,
-		handlerWar(gs),
+		handlerWar(gs, ch),
 	)
 	if err != nil {
 		log.Fatalf("could not subscribe to war declarations: %v", err)
@@ -95,7 +86,7 @@ func main() {
 			}
 
 			err = pubsub.PublishJSON(
-				publishCh,
+				ch,
 				routing.ExchangePerilTopic,
 				routing.ArmyMovesPrefix+"."+mv.Player.Username,
 				mv,
